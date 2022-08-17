@@ -1,0 +1,27 @@
+{
+  "name": "zod-generator",
+  "version": "0.0.0",
+  "description": "Generate zod schemas on runtime",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon ./src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chlouzada/zod-generator.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/chlouzada/zod-generator/issues"
+  },
+  "homepage": "https://github.com/chlouzada/zod-generator#readme",
+  "devDependencies": {
+    "nodemon": "^2.0.19",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "zod": "^3.18.0"
+  }
+}
