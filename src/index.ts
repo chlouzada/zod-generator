@@ -1,4 +1,6 @@
 import * as ts from "typescript";
+import { z } from "zod";
+import { resolver } from "./target";
 
 const filename = "src/target.ts";
 const program = ts.createProgram([filename], {});
@@ -7,7 +9,7 @@ const typeChecker = program.getTypeChecker();
 
 const extract = (s: ts.Symbol): any => {
   if ((s as any).type.intrinsicName)
-    return `${s.escapedName}:${(s as any).type.intrinsicName}`;
+    return `${s.escapedName}:z.${(s as any).type.intrinsicName}()`;
 
   if ((s as any).type.members.size == 1) {
     const key = Array.from((s as any).type.members.keys())[0];
@@ -18,7 +20,7 @@ const extract = (s: ts.Symbol): any => {
   for (const key of Array.from((s as any).type.members.keys())) {
     aux.push(extract((s as any).type.members.get(key)));
   }
-  return `${s.escapedName}:{${aux}}`;
+  return `${s.escapedName}:z.object({${aux}})`;
 };
 
 function recursivelyPrintVariableDeclarations(
@@ -38,7 +40,7 @@ function recursivelyPrintVariableDeclarations(
 
     const arr = returned.map((e) => extract(e));
 
-    console.log(`const schema = {${arr.join(`,`)}}`);
+    console.log(`const schema = z.object({${arr.join(`,`)}})`);
   }
 
   node
@@ -53,3 +55,7 @@ if (sourceFile) {
 } else {
   console.log(`no source file`);
 }
+
+const schema = z.object({age:z.number(),name:z.string(),test:z.string(),test2:z.object({agora:z.string(),e:z.number(),name:z.string(),test:z.string()})})
+const parsed  = schema.parse(resolver(`123`));
+console.log(parsed)
