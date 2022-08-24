@@ -7,7 +7,7 @@ const program = ts.createProgram([filename], {});
 const sourceFile = program.getSourceFile(filename)!;
 const typeChecker = program.getTypeChecker();
 
-const extract = (symbol:any): string => {
+const extract = (symbol: any): string => {
   if (symbol.type.intrinsicName)
     return `${symbol.escapedName}:z.${symbol.type.intrinsicName}()`;
 
@@ -23,39 +23,60 @@ const extract = (symbol:any): string => {
   return `${symbol.escapedName}:z.object({${aux}})`;
 };
 
-function recursivelyPrintVariableDeclarations(
-  node: ts.Node,
-  sourceFile: ts.SourceFile
-) {
-  if (ts.isVariableDeclaration(node)) {
-    const nodeText = node.getText(sourceFile);
-    if (!nodeText.includes("resolver")) return;
+function recursivelyGenerateSchema(node: ts.Node, sourceFile: ts.SourceFile) {
+  if (ts.isVariableDeclaration(node) || ts.isFunctionDeclaration(node)) {
+    if ((node as any).escapedName == `toString`) return;
 
-    const type = typeChecker.getTypeAtLocation(node);
+    try {
+      const symbols = typeChecker
+        .getTypeAtLocation(node)
+        .getCallSignatures()[0]
+        .getReturnType()
+        .getProperties();
 
-    const returned = type
-      .getCallSignatures()[0]
-      .getReturnType()
-      .getProperties();
+      const arr = symbols.map((s) => {
+        if (
+          s.name === "toString" ||
+          s.name === "toFixed" ||
+          s.name === "toExponential" ||
+          s.name === "toPrecision" ||
+          s.name === "valueOf" ||
+          s.name === "toLocaleString"
+        )
+          return undefined;
 
-    const arr = returned.map((e) => extract(e));
+        return extract(s);
+      });
 
-    console.log(`const schema = z.object({${arr.join(`,`)}})`);
+      for (const element of arr) if (!element) return;
+
+      console.log(`const schema = z.object({${arr.join(`,`)}})`);
+    } catch (err) {
+      console.log(err);
+    }
   }
 
   node
     .getChildren(sourceFile)
-    .forEach((child) =>
-      recursivelyPrintVariableDeclarations(child, sourceFile)
-    );
+    .forEach((child) => recursivelyGenerateSchema(child, sourceFile));
 }
 
 if (sourceFile) {
-  recursivelyPrintVariableDeclarations(sourceFile, sourceFile);
+  recursivelyGenerateSchema(sourceFile, sourceFile);
 } else {
   console.log(`no source file`);
 }
 
-const schema = z.object({age:z.number(),name:z.string(),test:z.string(),test2:z.object({agora:z.string(),e:z.number(),name:z.string(),test:z.string()})})
-const parsed  = schema.parse(resolver(`123`));
-console.log(parsed)
+// const schema = z.object({
+//   age: z.number(),
+//   name: z.string(),
+//   test: z.string(),
+//   test2: z.object({
+//     agora: z.string(),
+//     e: z.number(),
+//     name: z.string(),
+//     test: z.string(),
+//   }),
+// });
+// const parsed = schema.parse(resolver(`123`));
+// console.log(parsed);
