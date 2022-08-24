@@ -1,55 +1,47 @@
-import { z } from "zod";
+import * as ts from "typescript";
 
-function resolver(name: string) {
-  return {
-    age: 30,
-    name,
-  };
-}
+const filename = "src/target.ts";
+const program = ts.createProgram([filename], {});
+const sourceFile = program.getSourceFile(filename)!;
+const typeChecker = program.getTypeChecker();
 
-type ResolverType = ReturnType<typeof resolver>;
+function recursivelyPrintVariableDeclarations(
+  node: ts.Node,
+  sourceFile: ts.SourceFile
+) {
+  if (ts.isVariableDeclaration(node)) {
+    const nodeText = node.getText(sourceFile);
+    if (!nodeText.includes("resolver")) return;
 
-const generator = (data: ResolverType) => {
-  let schema = z.object({});
+    const type = typeChecker.getTypeAtLocation(node);
+    const typeName = typeChecker.typeToString(type, node);
 
-  const keys = Object.keys(data);
-  const values = Object.values(data);
+    console.log(nodeText);
+    console.log(`(${typeName})`);
 
-  const getCorrectZodType = (value: any) => {
-    if (typeof value === "string") {
-      return z.string();
-    }
-    return z.any();
-  };
+    const returned = type
+      .getCallSignatures()[0]
+      .getReturnType()
+      .getProperties();
 
-  for (const index in Object.keys(data)) {
-    const key = keys[index];
-    const value = values[index];
-    schema = schema.merge(
-      z.object({
-        [key]: getCorrectZodType(value),
-      })
+    const arr = returned.map(
+      (e) => `${e.escapedName}: z.${(e as any).type.intrinsicName}()`
     );
+
+    console.log(`const schema = { ${arr.join(`, `)} }`);
+
+    // returned[0] as any).type.intrinsicName
   }
-  return schema;
-};
 
-const generated = generator( resolver("test"));
-
-generated.parse({
-  age: 30,
-  name: "test",
-})
-
-
-try {
-  generated.parse({
-    age: 30,
-    name: 1,
-  })
-} catch (error) {
-  console.log(error instanceof z.ZodError && error.format());
+  node
+    .getChildren(sourceFile)
+    .forEach((child) =>
+      recursivelyPrintVariableDeclarations(child, sourceFile)
+    );
 }
 
-
-
+if (sourceFile) {
+  recursivelyPrintVariableDeclarations(sourceFile, sourceFile);
+} else {
+  console.log(`no source file`);
+}
