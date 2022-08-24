@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 export const resolver = (name: string) => {
   const a = () => 30;
 

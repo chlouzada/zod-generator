@@ -7,20 +7,20 @@ const program = ts.createProgram([filename], {});
 const sourceFile = program.getSourceFile(filename)!;
 const typeChecker = program.getTypeChecker();
 
-const extract = (s: ts.Symbol): any => {
-  if ((s as any).type.intrinsicName)
-    return `${s.escapedName}:z.${(s as any).type.intrinsicName}()`;
+const extract = (symbol:any): string => {
+  if (symbol.type.intrinsicName)
+    return `${symbol.escapedName}:z.${symbol.type.intrinsicName}()`;
 
-  if ((s as any).type.members.size == 1) {
-    const key = Array.from((s as any).type.members.keys())[0];
-    return extract((s as any).type.members.get(key));
+  if (symbol.type.members.size == 1) {
+    const key = Array.from(symbol.type.members.keys())[0];
+    return extract(symbol.type.members.get(key));
   }
 
-  let aux: any[] = [];
-  for (const key of Array.from((s as any).type.members.keys())) {
-    aux.push(extract((s as any).type.members.get(key)));
+  let aux: string[] = [];
+  for (const key of Array.from(symbol.type.members.keys())) {
+    aux.push(extract(symbol.type.members.get(key)));
   }
-  return `${s.escapedName}:z.object({${aux}})`;
+  return `${symbol.escapedName}:z.object({${aux}})`;
 };
 
 function recursivelyPrintVariableDeclarations(
